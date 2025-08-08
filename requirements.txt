@@ -1,0 +1,10 @@
+streamlit
+streamlit-cropper
+Pillow
+requests
+numpy
+google-api-python-client
+google-auth
+google-auth-oauthlib
+PyYAML
+toml
