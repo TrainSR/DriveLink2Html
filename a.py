@@ -138,14 +138,15 @@ with tab2:
     demo_url = st.text_input("Dán URL ảnh vào đây:", value="")
 
     return_type = st.checkbox("Chế Độ Auto?", value=True)
-    ratio_choice = st.selectbox("Chọn tỉ lệ crop:", ["1:1", "4:3", "16:9", "3:4", "9:16"])
+    ratio_choice = st.selectbox("Chọn tỉ lệ crop:", ["3:2", "1:1", "4:3", "16:9", "3:4", "9:16"])
     aspect_dict = {
         "1:1": (1, 1),
         "16:9": (16, 9),
         "4:3": (4, 3),
         "3:4": (3, 4),
         "2:3": (2, 3),
-        "9:16": (9, 16)
+        "9:16": (9, 16),
+        "3:2":(3,2)
     }
     aspect_ratio = aspect_dict[ratio_choice]
 
