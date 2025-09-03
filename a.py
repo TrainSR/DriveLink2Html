@@ -102,7 +102,7 @@ with st.sidebar:
             st.session_state["selected_file_id"] = selected_image_id
 
 # Tabs
-tab1, tab2 = st.tabs(["Drive Link", "Crop Image")
+tab1, tab2 = st.tabs(["Drive Link", "Crop Image"])
 with tab1:
     st.title("Google Drive Image Link Formatter")
 
