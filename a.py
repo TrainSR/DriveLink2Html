@@ -8,7 +8,9 @@ from io import BytesIO
 from streamlit_cropper import st_cropper
 import numpy as np
 import drive_module.drive_ops as drive_ops
-
+from yt_dlp import YoutubeDL
+import tempfile
+import os
 
 if "file_name_om" not in st.session_state:
     st.session_state.file_name_om = ""
@@ -100,7 +102,7 @@ with st.sidebar:
             st.session_state["selected_file_id"] = selected_image_id
 
 # Tabs
-tab1, tab2 = st.tabs(["Drive Link", "Crop Image"])
+tab1, tab2, tab3 = st.tabs(["Drive Link", "Crop Image", "Youtube Video"])
 with tab1:
     st.title("Google Drive Image Link Formatter")
 
@@ -200,3 +202,32 @@ with tab2:
                 mime="image/png",
                 on_click=reset_filename  # Reset sau khi tải
             )
+with tab3: 
+    st.title("YouTube Downloader bằng yt-dlp")
+
+    url = st.text_input("Nhập link YouTube:")
+
+    if not url.strip():
+        st.error("⚠️ Vui lòng nhập link.")
+    else:
+        with st.spinner("Đang tải video..."):
+            # Tạo file tạm để chứa video
+            temp_dir = tempfile.mkdtemp()
+            ydl_opts = {
+                "format": "bestvideo+bestaudio/best",
+                "outtmpl": os.path.join(temp_dir, "%(title)s.%(ext)s"),
+                "noplaylist": True,
+            }
+
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                filename = ydl.prepare_filename(info)
+
+            # Đọc file và cho phép tải về
+            with open(filename, "rb") as f:
+                st.download_button(
+                    label="⬇️ Tải video về máy",
+                    data=f,
+                    file_name=os.path.basename(filename),
+                    mime="video/mp4"
+                )
