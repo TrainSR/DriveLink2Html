@@ -8,9 +8,27 @@ from io import BytesIO
 from streamlit_cropper import st_cropper
 import numpy as np
 import drive_module.drive_ops as drive_ops
-from yt_dlp import YoutubeDL
+import cv2
 import tempfile
-import os
+
+def get_video_size_from_drive(file_id: str):
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+
+    # tải về file tạm
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+        r = requests.get(url, stream=True)
+        for chunk in r.iter_content(chunk_size=8192):
+            tmp.write(chunk)
+        tmp_path = tmp.name
+
+    # đọc metadata bằng cv2
+    cap = cv2.VideoCapture(tmp_path)
+    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap.release()
+    return width, height
+
+
 
 if "file_name_om" not in st.session_state:
     st.session_state.file_name_om = ""
@@ -117,7 +135,9 @@ with tab1:
     if drive_link:
         file_id = extract_file_id(drive_link)
         if file_id:
-            thumbnail_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=s800"
+            original_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            img_width_, img_height_ = get_video_size_from_drive(file_id)
+            thumbnail_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=s{max(img_width_, img_height_)}"
             html_code = f"<img src='{thumbnail_url}' alt='Preview'>"
             markdown_code = f'![Preview]({thumbnail_url})'
 
@@ -130,6 +150,20 @@ with tab1:
             st.code(html_code, language="html")
             st.markdown("### 📋 Markdown:")
             st.code(markdown_code, language="markdown")
+            if st.sidebar.checkbox("Video Mode?", key= "Video"):
+                video_link = f"""
+                    <style>
+                    .embed-container {{ position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; }}
+                    .embed-container iframe, .embed-container video {{ position: absolute; top:0; left:0; width:100%; height:100%; }}
+                    </style>
+
+                    <div class="embed-container">
+                    <iframe src="https://drive.google.com/file/d/{file_id}/preview" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                """
+                st.markdown('### 📋 Video:')
+                st.code(video_link)
+                st.markdown(video_link, unsafe_allow_html=True)
         else:
             st.error("❌ Không thể trích xuất file_id từ link đã nhập.")
 
