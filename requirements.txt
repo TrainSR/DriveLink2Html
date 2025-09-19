@@ -9,3 +9,4 @@ google-auth-oauthlib
 PyYAML
 toml
 yt-dlp
+cv2
