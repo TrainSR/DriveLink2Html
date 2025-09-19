@@ -3,10 +3,10 @@ streamlit-cropper
 Pillow
 requests
 numpy
-google-api-python-client
-google-auth
-google-auth-oauthlib
+opencv-python
 PyYAML
 toml
 yt-dlp
-opencv-python
+google-api-python-client
+google-auth
+google-auth-oauthlib
