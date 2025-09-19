@@ -130,7 +130,7 @@ with tab1:
         fid = st.session_state["selected_file_id"]
         default_link = f"https://drive.google.com/file/d/{fid}/view"
 
-    drive_link = st.text_input("Nhập link ảnh từ Google Drive:", value=default_link)
+    drive_link = st.sidebar.text_input("Nhập link ảnh từ Google Drive:", value=default_link)
 
     if drive_link:
         file_id = extract_file_id(drive_link)
@@ -146,24 +146,25 @@ with tab1:
 
             st.markdown("### URL Ảnh:")
             st.code(thumbnail_url)
+            st.sidebar.code(thumbnail_url)
             st.markdown("### 📋 HTML:")
             st.code(html_code, language="html")
             st.markdown("### 📋 Markdown:")
             st.code(markdown_code, language="markdown")
-            if st.sidebar.checkbox("Video Mode?", key= "Video"):
-                video_link = f"""
-                    <style>
-                    .embed-container {{ position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; }}
-                    .embed-container iframe, .embed-container video {{ position: absolute; top:0; left:0; width:100%; height:100%; }}
-                    </style>
+            # if st.sidebar.checkbox("Video Mode?", key= "Video"):
+                # video_link = f"""
+                #     <style>
+                #     .embed-container {{ position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; }}
+                #     .embed-container iframe, .embed-container video {{ position: absolute; top:0; left:0; width:100%; height:100%; }}
+                #     </style>
 
-                    <div class="embed-container">
-                    <iframe src="https://drive.google.com/file/d/{file_id}/preview" frameborder="0" allowfullscreen></iframe>
-                    </div>
-                """
-                st.markdown('### 📋 Video:')
-                st.code(video_link)
-                st.markdown(video_link, unsafe_allow_html=True)
+                #     <div class="embed-container">
+                #     <iframe src="https://drive.google.com/file/d/{file_id}/preview" frameborder="0" allowfullscreen></iframe>
+                #     </div>
+                # """
+                # st.markdown('### 📋 Video:')
+                # st.code(video_link)
+                # st.markdown(video_link, unsafe_allow_html=True)
         else:
             st.error("❌ Không thể trích xuất file_id từ link đã nhập.")
 
