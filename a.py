@@ -25,15 +25,16 @@ def get_video_size_from_drive(file_id: str):
     cap = cv2.VideoCapture(tmp_path)
     width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
-    return width, height
+    return width, height, frame_count
 
 def get_image_size_from_drive(file_id: str):
     url = f"https://drive.google.com/uc?export=download&id={file_id}"
     r = requests.get(url)  # không dùng stream=True
     r.raise_for_status()
     img = Image.open(BytesIO(r.content))
-    return img.width, img.height
+    return img.width, img.height, 1
 
 
 def get_file_size(file_id: str, is_video: bool):
@@ -141,35 +142,35 @@ with tab1:
         file_id = extract_file_id(drive_link)
         if file_id:
             original_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            img_width_, img_height_ = get_file_size(file_id, video_mode)
+            img_width_, img_height_, Blue = get_file_size(file_id, video_mode)
             thumbnail_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=s{max(img_width_, img_height_)}"
             html_code = f"<img src='{thumbnail_url}' alt='Preview'>"
             markdown_code = f'![Preview]({thumbnail_url})'
+            if Blue == 1 or Blue < 0:
+                st.markdown("### ✅ Ảnh xem trước:")
+                st.markdown(html_code, unsafe_allow_html=True)
 
-            st.markdown("### ✅ Ảnh xem trước:")
-            st.markdown(html_code, unsafe_allow_html=True)
+                st.markdown("### URL Ảnh:")
+                st.code(thumbnail_url)
+                st.sidebar.code(thumbnail_url)
+                st.markdown("### 📋 HTML:")
+                st.code(html_code, language="html")
+                st.markdown("### 📋 Markdown:")
+                st.code(markdown_code, language="markdown")
+            else:
+                video_link = f"""
+                    <style>
+                    .embed-container {{ position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; }}
+                    .embed-container iframe, .embed-container video {{ position: absolute; top:0; left:0; width:100%; height:100%; }}
+                    </style>
 
-            st.markdown("### URL Ảnh:")
-            st.code(thumbnail_url)
-            st.sidebar.code(thumbnail_url)
-            st.markdown("### 📋 HTML:")
-            st.code(html_code, language="html")
-            st.markdown("### 📋 Markdown:")
-            st.code(markdown_code, language="markdown")
-            # if st.sidebar.checkbox("Video Mode?", key= "Video"):
-                # video_link = f"""
-                #     <style>
-                #     .embed-container {{ position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; }}
-                #     .embed-container iframe, .embed-container video {{ position: absolute; top:0; left:0; width:100%; height:100%; }}
-                #     </style>
-
-                #     <div class="embed-container">
-                #     <iframe src="https://drive.google.com/file/d/{file_id}/preview" frameborder="0" allowfullscreen></iframe>
-                #     </div>
-                # """
-                # st.markdown('### 📋 Video:')
-                # st.code(video_link)
-                # st.markdown(video_link, unsafe_allow_html=True)
+                    <div class="embed-container">
+                    <iframe src="https://drive.google.com/file/d/{file_id}/preview" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                """
+                st.markdown('### 📋 Video:')
+                st.markdown(video_link, unsafe_allow_html=True)
+                st.code(video_link)
         else:
             st.error("❌ Không thể trích xuất file_id từ link đã nhập.")
 
