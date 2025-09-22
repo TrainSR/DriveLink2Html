@@ -1,7 +1,6 @@
+#a.py
+
 import streamlit as st
-from yt_dlp import YoutubeDL
-import tempfile
-import os
 import re
 from PIL import Image
 import requests
@@ -9,7 +8,40 @@ from io import BytesIO
 from streamlit_cropper import st_cropper
 import numpy as np
 import drive_module.drive_ops as drive_ops
+import cv2
+import tempfile
 
+def get_video_size_from_drive(file_id: str):
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+
+    # tải về file tạm
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+        r = requests.get(url, stream=True)
+        for chunk in r.iter_content(chunk_size=8192):
+            tmp.write(chunk)
+        tmp_path = tmp.name
+
+    # đọc metadata bằng cv2
+    cap = cv2.VideoCapture(tmp_path)
+    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    return width, height, frame_count
+
+def get_image_size_from_drive(file_id: str):
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    r = requests.get(url)  # không dùng stream=True
+    r.raise_for_status()
+    img = Image.open(BytesIO(r.content))
+    return img.width, img.height, 1
+
+
+def get_file_size(file_id: str, is_video: bool):
+    if is_video:
+        return get_video_size_from_drive(file_id)
+    else:
+        return get_image_size_from_drive(file_id)
 
 if "file_name_om" not in st.session_state:
     st.session_state.file_name_om = ""
@@ -73,13 +105,6 @@ def extract_file_id(link):
             return match.group(1)
     return None
 
-import streamlit as st
-
-# Function extract_file_id assumed defined
-# Function drive_ops.select_working_folder assumed defined
-# Function drive_ops.get_images_in_folder(folder_id) should return list of (name, file_id) tuples
-
-# App sidebar: Select folder and show images
 with st.sidebar:
     folder_id = drive_ops.select_working_folder()
 
@@ -101,7 +126,7 @@ with st.sidebar:
             st.session_state["selected_file_id"] = selected_image_id
 
 # Tabs
-tab1, tab2, tab3 = st.tabs(["Drive Link", "Crop Image", "Download YouTube Video"])
+tab1, tab2 = st.tabs(["Drive Link", "Crop Image"])
 with tab1:
     st.title("Google Drive Image Link Formatter")
 
@@ -110,25 +135,42 @@ with tab1:
     if "selected_file_id" in st.session_state:
         fid = st.session_state["selected_file_id"]
         default_link = f"https://drive.google.com/file/d/{fid}/view"
-
-    drive_link = st.text_input("Nhập link ảnh từ Google Drive:", value=default_link)
+    video_mode = st.sidebar.checkbox("Video Mode?", key="Video_modeLL")
+    drive_link = st.sidebar.text_input("Nhập link ảnh từ Google Drive:", value=default_link)
 
     if drive_link:
         file_id = extract_file_id(drive_link)
         if file_id:
-            thumbnail_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=s800"
+            original_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            img_width_, img_height_, Blue = get_file_size(file_id, video_mode)
+            thumbnail_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=s{max(img_width_, img_height_)}"
             html_code = f"<img src='{thumbnail_url}' alt='Preview'>"
             markdown_code = f'![Preview]({thumbnail_url})'
+            if Blue == 1 or Blue < 0:
+                st.markdown("### ✅ Ảnh xem trước:")
+                st.markdown(html_code, unsafe_allow_html=True)
 
-            st.markdown("### ✅ Ảnh xem trước:")
-            st.markdown(html_code, unsafe_allow_html=True)
+                st.markdown("### URL Ảnh:")
+                st.code(thumbnail_url)
+                st.sidebar.code(thumbnail_url)
+                st.markdown("### 📋 HTML:")
+                st.code(html_code, language="html")
+                st.markdown("### 📋 Markdown:")
+                st.code(markdown_code, language="markdown")
+            else:
+                video_link = f"""
+                    <style>
+                    .embed-container {{ position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; }}
+                    .embed-container iframe, .embed-container video {{ position: absolute; top:0; left:0; width:100%; height:100%; }}
+                    </style>
 
-            st.markdown("### URL Ảnh:")
-            st.code(thumbnail_url)
-            st.markdown("### 📋 HTML:")
-            st.code(html_code, language="html")
-            st.markdown("### 📋 Markdown:")
-            st.code(markdown_code, language="markdown")
+                    <div class="embed-container">
+                    <iframe src="https://drive.google.com/file/d/{file_id}/preview" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                """
+                st.markdown('### 📋 Video:')
+                st.markdown(video_link, unsafe_allow_html=True)
+                st.code(video_link)
         else:
             st.error("❌ Không thể trích xuất file_id từ link đã nhập.")
 
@@ -139,7 +181,7 @@ with tab2:
     demo_url = st.text_input("Dán URL ảnh vào đây:", value="")
 
     return_type = st.checkbox("Chế Độ Auto?", value=True)
-    ratio_choice = st.selectbox("Chọn tỉ lệ crop:", ["3:2", "1:1", "4:3", "16:9", "3:4", "9:16"])
+    ratio_choice = st.selectbox("Chọn tỉ lệ crop:", ["3:2", "2:3", "1:1", "4:3", "16:9", "3:4", "9:16", "1:1.4"])
     aspect_dict = {
         "1:1": (1, 1),
         "16:9": (16, 9),
@@ -147,11 +189,11 @@ with tab2:
         "3:4": (3, 4),
         "2:3": (2, 3),
         "9:16": (9, 16),
-        "3:2":(3,2)
+        "3:2": (3,2),
+        "1:1.4": (10,14)
     }
     aspect_ratio = aspect_dict[ratio_choice]
-
-    if demo_url:
+    if demo_url and not drive_link:
         response = requests.get(demo_url)
         if response.status_code == 200:
             img = Image.open(BytesIO(response.content))
@@ -201,32 +243,3 @@ with tab2:
                 mime="image/png",
                 on_click=reset_filename  # Reset sau khi tải
             )
-with tab3: 
-    st.title("YouTube Downloader bằng yt-dlp")
-
-    url = st.text_input("Nhập link YouTube:")
-
-    if not url.strip():
-        st.error("⚠️ Vui lòng nhập link.")
-    else:
-        with st.spinner("Đang tải video..."):
-            # Tạo file tạm để chứa video
-            temp_dir = tempfile.mkdtemp()
-            ydl_opts = {
-                "format": "bestvideo+bestaudio/best",
-                "outtmpl": os.path.join(temp_dir, "%(title)s.%(ext)s"),
-                "noplaylist": True,
-            }
-
-            with YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                filename = ydl.prepare_filename(info)
-
-            # Đọc file và cho phép tải về
-            with open(filename, "rb") as f:
-                st.download_button(
-                    label="⬇️ Tải video về máy",
-                    data=f,
-                    file_name=os.path.basename(filename),
-                    mime="video/mp4"
-                )
