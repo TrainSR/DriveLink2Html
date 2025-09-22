@@ -28,7 +28,19 @@ def get_video_size_from_drive(file_id: str):
     cap.release()
     return width, height
 
+def get_image_size_from_drive(file_id: str):
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    r = requests.get(url)  # không dùng stream=True
+    r.raise_for_status()
+    img = Image.open(BytesIO(r.content))
+    return img.width, img.height
 
+
+def get_file_size(file_id: str, is_video: bool):
+    if is_video:
+        return get_video_size_from_drive(file_id)
+    else:
+        return get_image_size_from_drive(file_id)
 
 if "file_name_om" not in st.session_state:
     st.session_state.file_name_om = ""
@@ -92,13 +104,6 @@ def extract_file_id(link):
             return match.group(1)
     return None
 
-import streamlit as st
-
-# Function extract_file_id assumed defined
-# Function drive_ops.select_working_folder assumed defined
-# Function drive_ops.get_images_in_folder(folder_id) should return list of (name, file_id) tuples
-
-# App sidebar: Select folder and show images
 with st.sidebar:
     folder_id = drive_ops.select_working_folder()
 
@@ -129,14 +134,14 @@ with tab1:
     if "selected_file_id" in st.session_state:
         fid = st.session_state["selected_file_id"]
         default_link = f"https://drive.google.com/file/d/{fid}/view"
-
+    video_mode = st.sidebar.checkbox("Video Mode?", key="Video_modeLL")
     drive_link = st.sidebar.text_input("Nhập link ảnh từ Google Drive:", value=default_link)
 
     if drive_link:
         file_id = extract_file_id(drive_link)
         if file_id:
             original_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            img_width_, img_height_ = get_video_size_from_drive(file_id)
+            img_width_, img_height_ = get_file_size(file_id, video_mode)
             thumbnail_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=s{max(img_width_, img_height_)}"
             html_code = f"<img src='{thumbnail_url}' alt='Preview'>"
             markdown_code = f'![Preview]({thumbnail_url})'
@@ -187,8 +192,7 @@ with tab2:
         "1:1.4": (10,14)
     }
     aspect_ratio = aspect_dict[ratio_choice]
-
-    if demo_url:
+    if demo_url and not drive_link:
         response = requests.get(demo_url)
         if response.status_code == 200:
             img = Image.open(BytesIO(response.content))
