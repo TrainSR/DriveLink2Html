@@ -152,7 +152,6 @@ with tab1:
 
                 st.markdown("### URL Ảnh:")
                 st.code(thumbnail_url)
-                st.sidebar.code(thumbnail_url)
                 st.markdown("### 📋 HTML:")
                 st.code(html_code, language="html")
                 st.markdown("### 📋 Markdown:")
@@ -171,6 +170,8 @@ with tab1:
                 st.markdown('### 📋 Video:')
                 st.markdown(video_link, unsafe_allow_html=True)
                 st.code(video_link)
+                st.sidebar.markdown("Bìa Video:")
+            st.sidebar.code(thumbnail_url)
         else:
             st.error("❌ Không thể trích xuất file_id từ link đã nhập.")
 
